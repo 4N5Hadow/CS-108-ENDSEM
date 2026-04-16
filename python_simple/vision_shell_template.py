@@ -453,7 +453,7 @@ def main():
             if result is not None:
                 print(result)
         except Exception as e:
-            print(f"[ERROR] {e}")
+            print(f"[ERROL] {e}")
 
 
 if __name__ == '__main__':
