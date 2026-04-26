@@ -17,7 +17,7 @@ BINARY    := NOVA_shell
 
 STUDENT_DIR   := student_package
 STUDENT_FILES := $(STUDENT_DIR)/NOVA_shell \
-                 $(STUDENT_DIR)/vision_shell_template.py \
+                 $(STUDENT_DIR)/vision_shell.py \
                  $(STUDENT_DIR)/CS108_VISION_OS_Exam.docx
 
 .PHONY: all shell student clean
@@ -41,7 +41,7 @@ shell: $(BINARY)
 student: $(BINARY)
 	@mkdir -p $(STUDENT_DIR)
 	@cp $(BINARY)                 $(STUDENT_DIR)/
-	@cp vision_shell_template.py  $(STUDENT_DIR)/
+	@cp vision_shell.py  $(STUDENT_DIR)/
 	@cp CS108_VISION_OS_Exam.docx $(STUDENT_DIR)/
 	@echo "  Student package:"
 	@ls -1 $(STUDENT_DIR)/ | sed 's/^/    /'
