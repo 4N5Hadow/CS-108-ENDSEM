@@ -1,19 +1,15 @@
 """
 CS108 — End Semester Examination
-Operation: VISION OS — Implant the Shell. Save the Nexus.
+Operation: VISION OS
 
 Student Name:   [YOUR NAME HERE]
 Roll Number:    [YOUR ROLL NUMBER HERE]
 
-HOW TO RUN:
-    Inside ultron_shell:
-        ULTRON@NEXUS ~> python3 vision_shell.py
+Run inside NOVA_shell:
+    NOVA@NEXUS ~> python3 vision_shell.py
 
-RULES:
-    - Allowed imports: copy, re  (nothing else)
-    - No real file I/O  (no open, os, pathlib, subprocess, etc.)
-    - All data must live in RAM — Python dictionaries and lists only
-    - Do NOT change class names or method signatures
+Allowed imports: copy, re  (nothing else)
+No real file I/O. All data lives in RAM.
 """
 
 import copy
@@ -21,26 +17,47 @@ import re
 
 
 # =============================================================================
-# PART 1: FileSystem Class  [5 marks]
+# PART 1 — FileSystem  [5 marks]
+#
+# Sushant designed this class. Shanmathi implemented it under fire.
+# She flagged bugs before she could fix them. Find them. Fix them.
+#
+# There are at least 5 bugs in this implementation.
+# 4 marks for the 4 public assertions below. 1 mark for a hidden test.
+#
+# Public assertions (all must pass after your fixes):
+#
+#   fs = FileSystem()
+#   fs.cd('/')
+#   fs.mkdir('/ops')
+#   fs.cd('ops')
+#   assert fs.pwd() == '/ops'                             # (a)
+#
+#   fs2 = FileSystem()
+#   fs2.cd('/')
+#   assert fs2.read('home') == ''                         # (b)
+#
+#   fs3 = FileSystem()
+#   fs3.touch('zebra.txt')
+#   fs3.touch('alpha.txt')
+#   assert fs3.ls()[-1] == 'zebra.txt'                    # (c)
+#
+#   fs4 = FileSystem()
+#   log = 'resistance is live\nNOVA wins\nresistance fights back'
+#   assert fs4.grep('resistance', log) == \
+#          'resistance is live\nresistance fights back'   # (d)
+#
+# Every bug is a single-line change.
+# The score command runs only public tests. Write your own edge cases.
+# Even the public tests may change for final scoring.
 # =============================================================================
 
 class FileSystem:
-    """
-    An in-memory hierarchical filesystem stored as a tree of nested dicts.
 
-    self.current_dir — string tracking current location, e.g. '/home/tony'
-
-    Study __init__ carefully. It shows you exactly how the tree is structured.
-    Every method you write must work with that same structure.
-    """
-
-    # ── GIVEN TO YOU — do not change ─────────────────────────────────────────
+    # ── GIVEN — do not change __init__ or the two helpers ────────────────────
 
     def __init__(self):
-        """
-        Boot the filesystem. The Nexus starts with Tony's directory
-        already in place, and drops you straight into it.
-        """
+        """Boot with Sushant's directory pre-created."""
         self.root = {
             'type': 'directory',
             'name': '/',
@@ -49,14 +66,14 @@ class FileSystem:
                     'type': 'directory',
                     'name': 'home',
                     'children': {
-                        'tony': {
+                        'sushant': {
                             'type': 'directory',
-                            'name': 'tony',
+                            'name': 'sushant',
                             'children': {
-                                'mission.txt': {
+                                'nova_log.txt': {
                                     'type': 'file',
-                                    'name': 'mission.txt',
-                                    'content': 'Implant the shell. Save the Nexus.'
+                                    'name': 'nova_log.txt',
+                                    'content': 'NOVA was meant to save the world. She still can.'
                                 }
                             }
                         }
@@ -64,24 +81,16 @@ class FileSystem:
                 }
             }
         }
-        self.current_dir = '/home/tony'
+        self.current_dir = '/home/sushant'
 
     def pwd(self):
-        """Return current working directory path as a string."""
         return self.current_dir
 
     def _get_node(self, path):
-        """
-        Navigate the tree and return the node dict at the given absolute path.
-        Returns None if the path does not exist.
-
-        Use this in every method that needs to look up a directory or file.
-        """
         if path == '/':
             return self.root
-        parts = path.strip('/').split('/')
         current = self.root
-        for part in parts:
+        for part in path.strip('/').split('/'):
             if part == '':
                 continue
             if current['type'] != 'directory':
@@ -92,299 +101,147 @@ class FileSystem:
         return current
 
     def _get_parent_path(self, path):
-        """
-        Return the parent directory path of the given absolute path.
-
-        Examples:
-            '/home/tony'  ->  '/home'
-            '/home'       ->  '/'
-            '/'           ->  '/'
-        """
         if path == '/':
             return '/'
         parent = path.rstrip('/').rsplit('/', 1)[0]
         return parent if parent != '' else '/'
 
-    # ── TODO: implement the methods below ────────────────────────────────────
+    # ── FIX THE BUGS BELOW ────────────────────────────────────────────────────
 
     def mkdir(self, path):
-        """
-        Create a new directory at the given absolute path.
-        The parent directory must already exist.
-
-        Args:
-            path (str): absolute path  e.g. '/home/tony/logs'
-
-        Example:
-            fs.mkdir('/home/tony/logs')
-            fs.mkdir('/tmp')
-        """
-        # TODO
-        pass
+        parent_node = self._get_node(self.current_dir)        # <- bug?
+        dir_name    = path.rstrip('/').rsplit('/', 1)[-1]
+        parent_node['children'][dir_name] = {
+            'type': 'directory', 'name': dir_name, 'children': {}
+        }
 
     def cd(self, path):
-        """
-        Change the current working directory. Does not return anything.
-
-        Supports three forms:
-            cd('/home/tony')   absolute path
-            cd('logs')         relative — child of current directory
-            cd('..')           go up one level
-
-        Args:
-            path (str): target directory
-        """
-        # TODO
-        pass
+        if path == '..':
+            self.current_dir = self._get_parent_path(self.current_dir)
+        elif path.startswith('/'):
+            self.current_dir = path.rstrip('/') or '/'
+        else:
+            self.current_dir = self.current_dir + '/' + path  # <- bug?
 
     def touch(self, filename):
-        """
-        Create an empty file in the current directory.
-
-        Args:
-            filename (str): name only, not a path  e.g. 'notes.txt'
-
-        Example:
-            fs.touch('notes.txt')   # creates notes.txt with content = ''
-        """
-        # TODO
-        pass
+        node = self._get_node(self.current_dir)
+        node['children'][filename] = {
+            'type': 'file', 'name': filename, 'content': ''
+        }
 
     def write(self, filename, content):
-        """
-        Write a string into a file in the current directory.
-
-        Args:
-            filename (str): name only
-            content  (str): string to write
-
-        Example:
-            fs.write('notes.txt', 'Ultron last seen at sector 7')
-        """
-        # TODO
-        pass
+        node = self._get_node(self.current_dir)
+        if filename in node['children']:
+            node['children'][filename]['content'] = content
+        else:
+            node['children'][filename] = {
+                'type': 'file', 'name': filename, 'content': content
+            }
 
     def read(self, filename):
-        """
-        Read and return the content of a file in the current directory.
-        Return '' if the file does not exist.
-
-        Args:
-            filename (str): name only
-
-        Returns:
-            str: file content, or '' if not found
-
-        Example:
-            fs.read('notes.txt')   # -> 'Ultron last seen at sector 7'
-            fs.read('ghost.txt')   # -> ''
-        """
-        # TODO
-        pass
+        node  = self._get_node(self.current_dir)
+        entry = node['children'].get(filename)
+        return entry['content'] if entry else ''               # <- bug?
 
     def ls(self):
-        """
-        Return a sorted list of all file and directory names in the
-        current directory.
-
-        Returns:
-            list[str]: sorted names
-
-        Example:
-            fs.ls()   # -> ['logs', 'mission.txt', 'notes.txt']
-        """
-        # TODO
-        pass
+        return list(self._get_node(self.current_dir)['children'].keys())  # <- bug?
 
     def grep(self, pattern, text):
-        """
-        Filter a multi-line string, keeping only lines containing pattern.
-
-        Args:
-            pattern (str): search term
-            text    (str): multi-line string (lines separated by '\\n')
-
-        Returns:
-            str: matching lines joined by '\\n'
-
-        Example:
-            fs.grep('Ultron', 'Ultron spotted\\nAll clear\\nUltron retreating')
-            # -> 'Ultron spotted\\nUltron retreating'
-        """
-        # TODO
-        pass
+        lines = text.split()                                   # <- bug?
+        return '\n'.join(line for line in lines if pattern in line)
 
 
 # =============================================================================
-# PART 2: VersionControl Class  [5 marks]
+# PART 2 — VersionControl  [5 marks]
 # =============================================================================
 
 class VersionControl:
     """
-    Simplified in-memory version control.
-    Stores deep-copy snapshots of the entire filesystem tree per commit.
+    Snapshot-based version control.
+    commit() must deep-copy the entire filesystem tree.
     """
-
-    # ── GIVEN TO YOU — do not change ─────────────────────────────────────────
 
     def __init__(self, fs):
         self.fs             = fs
-        self.commits        = {}              # { commit_id : snapshot_dict }
-        self.branches       = {'main': None}  # { branch_name : commit_id }
-        self.head           = 'main'          # currently active branch
-        self.staging        = []              # files staged for next commit
+        self.commits        = {}
+        self.branches       = {'main': None}
+        self.head           = 'main'
+        self.staging        = []
         self.commit_counter = 0
 
-    # ── TODO: implement the methods below ────────────────────────────────────
-
     def add(self, filepath):
-        """
-        Stage a file path for the next commit.
-
-        Args:
-            filepath (str): e.g. '/home/tony/notes.txt'
-
-        Example:
-            vc.add('/home/tony/notes.txt')
-        """
+        """Append filepath to staging list."""
         # TODO
         pass
 
     def commit(self, message):
         """
-        Save a snapshot of the entire filesystem state.
-        Returns the commit ID (integer, starts at 1, increments by 1).
-        Clears the staging list after committing.
-
-        The snapshot must be a deep copy — see Module Reference for copy.deepcopy.
-
-        Args:
-            message (str): short description
-
-        Returns:
-            int: commit ID
-
-        Example:
-            vc.commit("Tony's plan saved")   # -> 1
+        Snapshot the entire FS. Return commit ID (int, starts at 1).
+        Clear staging after committing.
         """
         # TODO
         pass
 
     def branch(self, name):
-        """
-        Create a new branch pointing to the current commit.
-
-        Args:
-            name (str): branch name  e.g. 'dev'
-
-        Example:
-            vc.branch('dev')
-        """
+        """Create branch pointing to current commit."""
         # TODO
         pass
 
     def checkout(self, name):
         """
-        Switch to a branch and restore the filesystem to that branch's
-        last committed snapshot (tree and current_dir both restored).
-        Use deep copy when restoring so the stored snapshot stays intact.
-
-        Args:
-            name (str): branch name
-
-        Example:
-            vc.checkout('main')
+        Switch to branch. Restore FS tree and current_dir from
+        that branch's snapshot (deep-copy on restore).
         """
         # TODO
         pass
 
     def status(self):
-        """
-        Return current staging status.
-
-        Returns:
-            dict: {'staged': [list of staged paths], 'modified': []}
-
-        Example:
-            vc.add('/home/tony/notes.txt')
-            vc.status()
-            # -> {'staged': ['/home/tony/notes.txt'], 'modified': []}
-        """
+        """Return {'staged': [...], 'modified': []}."""
         # TODO
         pass
 
 
 # =============================================================================
-# PART 3: NexusShell Class  [5 marks]
+# PART 3 — NexusShell  [5 marks]
+#
+# Implement NexusShell from scratch.
+# Provide a run(command_string) method that handles:
+#   - Output redirection:  echo hi > file.txt
+#   - Pipes:               cat file.txt | grep hi
+#   - All commands in the table below
+#
+# The main() loop at the bottom shows how run() is called.
 # =============================================================================
 
 class NexusShell:
     """
-    Interactive shell tying FileSystem and VersionControl together.
+    Commands to support:
+        pwd
+        ls
+        mkdir <path>
+        cd <path>
+        touch <file>
+        echo <text>                 returns the text
+        cat <file>                  returns file contents
+        grep <pattern>              filters piped input
+        git add <path>
+        git commit "<msg>"          returns "Committed as ID N"
+        git branch <name>
+        git checkout <name>
+        git status                  returns "Staged: [...]"
+        help
 
-    The interactive loop, prompt display, and pipe-splitting are already
-    written. You implement _execute_single only.
+    Shell-level handling:
+        <cmd> > <file>   redirect output to file (write, not append)
+        <cmd1> | <cmd2>  pipe output of cmd1 as input to cmd2
     """
-
-    # ── GIVEN TO YOU — do not change ─────────────────────────────────────────
 
     def __init__(self):
         self.fs = FileSystem()
         self.vc = VersionControl(self.fs)
 
     def run(self, command_string):
-        """Execute one or more piped commands. Returns output or None."""
-        command_string = command_string.strip()
-        if not command_string:
-            return None
-        if '|' in command_string:
-            return self._handle_pipe(command_string)
-        return self._execute_single(command_string)
-
-    def _handle_pipe(self, command_string):
-        """Chain commands on | passing each output as the next input_text."""
-        output = None
-        for part in command_string.split('|'):
-            output = self._execute_single(part.strip(), input_text=output)
-        return output
-
-    # ── TODO: implement _execute_single ──────────────────────────────────────
-
-    def _execute_single(self, command, input_text=None):
-        """
-        Parse and execute a single command string.
-
-        Args:
-            command    (str):      the command to run
-            input_text (str|None): piped text from previous command, or None
-
-        Returns:
-            str | None: output to display, or None for silent commands
-
-        Commands to handle:
-
-            pwd
-            ls
-            mkdir <path>
-            cd <path>
-            touch <filename>
-            echo <text> > <filename>
-            cat <filename>
-            grep <pattern>            <- uses input_text when piped
-            git add <filepath>
-            git commit "<message>"    <- output: "Committed as ID N"
-            git branch <name>
-            git checkout <name>
-            git status                <- output: "Staged: [...]"
-            help
-        """
-        parts = command.strip().split()
-        if not parts:
-            return None
-
-        cmd = parts[0]
-
-        # TODO: implement all command cases
+        # TODO: implement
         pass
 
 
@@ -393,67 +250,50 @@ class NexusShell:
 # =============================================================================
 
 HELP_TEXT = """
-VISION OS  —  Available Commands
+VISION OS  —  Commands
 ---------------------------------------------------------
-  pwd                      Print current directory
-  ls                       List files and folders
-  mkdir <path>             Make a new directory
-  cd <path>                Change directory  (supports ..)
-  touch <file>             Create an empty file
-  echo <text> > <file>     Write text to a file
-  cat <file>               Read a file
-  cat <file> | grep <word> Filter lines containing word
-
-  git add <path>           Stage a file
-  git commit "<message>"   Save a snapshot
-  git branch <name>        Create a branch
-  git checkout <name>      Switch to a branch
-  git status               Show staged files
-
-  help                     Show this message
-  exit                     Shut down VISION OS
+  pwd / ls / mkdir / cd / touch
+  echo <text>
+  echo <text> > <file>
+  cat <file>
+  cat <file> | grep <pattern>
+  git add / commit / branch / checkout / status
+  help / exit
 ---------------------------------------------------------
 """
 
 
 # =============================================================================
-# INTERACTIVE SHELL  —  GIVEN TO YOU, do not change
+# INTERACTIVE SHELL  —  do not change
 # =============================================================================
 
 def main():
     shell = NexusShell()
 
-    print("=" * 60)
+    print("=" * 58)
     print("  VISION OS v1.0  —  Implant active.")
-    print("  Running inside Ultron's network.")
-    print("  He left Python alive. That was his mistake.")
-    print("  Type 'help' for commands. Type 'exit' to disconnect.")
-    print("=" * 60)
+    print("  Sushant wrote it. Ansh held the door. Shanmathi set the clock.")
+    print("  She left Python alive. That was her mistake.")
+    print("=" * 58)
     print()
 
     while True:
-        cwd    = shell.fs.pwd()
-        prompt = f"[VISION-OS {cwd}]$ "
-
         try:
-            user_input = input(prompt).strip()
+            user_input = input(f"[VISION-OS {shell.fs.pwd()}]$ ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nDisconnecting. The implant remains.")
+            print("\nDisconnecting.")
             break
-
         if not user_input:
             continue
-
         if user_input.lower() == 'exit':
-            print("Disconnecting. The implant remains.")
+            print("Disconnecting.")
             break
-
         try:
             result = shell.run(user_input)
             if result is not None:
                 print(result)
         except Exception as e:
-            print(f"[ERROL] {e}")
+            print(f"[ERROR] {e}")
 
 
 if __name__ == '__main__':
